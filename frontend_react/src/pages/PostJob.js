@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { apiCall } from "../utils/apiClient";
 import Sidebar from "../components/Sidebar";
-import "./PostJob.css";
 
 function PostJob() {
-  // redirect non‑recruiters away
   useEffect(() => {
     const role = localStorage.getItem("role");
     if (role !== "recruiter") {
@@ -20,107 +18,104 @@ function PostJob() {
     job_type: "remote",
     duration: "medium",
   });
-  const [errorMsg, setErrorMsg] = useState("");
+  const [message, setMessage] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
-    setErrorMsg("");
+    setMessage("");
 
     try {
-      const res = await axios.post(
-        "http://127.0.0.1:8000/api/auth/jobs/create/",
-        job,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      alert("Job posted successfully");
-      // optionally clear form
-      setJob({
-        title: "",
-        description: "",
-        requirements: "",
-        salary: "",
-        job_type: "remote",
-        duration: "medium",
+      const res = await apiCall("http://localhost:8000/api/auth/jobs/create/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(job)
       });
-    } catch (err) {
-      if (err.response && err.response.data) {
-        setErrorMsg(JSON.stringify(err.response.data));
+
+      if (res.ok) {
+        setMessage("✓ Job posted successfully!");
+        setJob({
+          title: "",
+          description: "",
+          requirements: "",
+          salary: "",
+          job_type: "remote",
+          duration: "medium",
+        });
+        setTimeout(() => setMessage(""), 3000);
       } else {
-        setErrorMsg(err.message);
+        setMessage("Failed to post job");
       }
+    } catch (err) {
+      setMessage("Error posting job");
     }
   };
 
   return (
     <div className="app">
       <Sidebar role="recruiter" />
-
       <div className="main">
-        <div className="card post-job-card">
-          <h2>Post a Job</h2>
+        <div className="page-header">
+          <h1>➕ Post a Job</h1>
+          <p>Create a new job posting to attract talented freelancers</p>
+        </div>
 
-          {errorMsg && <div className="error-message">{errorMsg}</div>}
+        {message && (
+          <div className={message.includes('✓') ? 'success-message' : 'error-message'}>
+            {message}
+          </div>
+        )}
 
-          <form className="job-form" onSubmit={handleSubmit}>
+        <div className="section-card">
+          <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label>Job Title</label>
+              <label className="form-label">Job Title</label>
               <input
+                className="form-input"
                 value={job.title}
-                placeholder="Job Title"
-                onChange={(e) =>
-                  setJob({ ...job, title: e.target.value })
-                }
+                placeholder="e.g., Full Stack Developer"
+                onChange={(e) => setJob({ ...job, title: e.target.value })}
                 required
               />
             </div>
 
             <div className="form-group">
-              <label>Description</label>
+              <label className="form-label">Description</label>
               <textarea
+                className="form-textarea"
                 value={job.description}
-                placeholder="Job Description"
-                onChange={(e) =>
-                  setJob({ ...job, description: e.target.value })
-                }
+                placeholder="Describe the job role and responsibilities..."
+                onChange={(e) => setJob({ ...job, description: e.target.value })}
                 required
               />
             </div>
 
             <div className="form-group">
-              <label>Requirements</label>
+              <label className="form-label">Requirements</label>
               <textarea
+                className="form-textarea"
                 value={job.requirements}
-                placeholder="Skills / requirements (optional)"
-                onChange={(e) =>
-                  setJob({ ...job, requirements: e.target.value })
-                }
+                placeholder="List required skills and qualifications..."
+                onChange={(e) => setJob({ ...job, requirements: e.target.value })}
               />
             </div>
 
             <div className="form-group">
-              <label>Salary</label>
+              <label className="form-label">Salary</label>
               <input
+                className="form-input"
                 value={job.salary}
-                placeholder="e.g. $5000 - $8000"
-                onChange={(e) =>
-                  setJob({ ...job, salary: e.target.value })
-                }
+                placeholder="e.g., $5000 - $8000"
+                onChange={(e) => setJob({ ...job, salary: e.target.value })}
               />
             </div>
 
-            <div className="form-group two-column">
-              <div>
-                <label>Job Type</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div className="form-group">
+                <label className="form-label">Job Type</label>
                 <select
+                  className="form-select"
                   value={job.job_type}
-                  onChange={(e) =>
-                    setJob({ ...job, job_type: e.target.value })
-                  }
+                  onChange={(e) => setJob({ ...job, job_type: e.target.value })}
                 >
                   <option value="remote">Remote</option>
                   <option value="onsite">On-site</option>
@@ -128,23 +123,22 @@ function PostJob() {
                 </select>
               </div>
 
-              <div>
-                <label>Duration</label>
+              <div className="form-group">
+                <label className="form-label">Duration</label>
                 <select
+                  className="form-select"
                   value={job.duration}
-                  onChange={(e) =>
-                    setJob({ ...job, duration: e.target.value })
-                  }
+                  onChange={(e) => setJob({ ...job, duration: e.target.value })}
                 >
-                  <option value="short">Short (&lt;1 month)</option>
-                  <option value="medium">Medium (1–3 months)</option>
-                  <option value="long">Long (&gt;3 months)</option>
+                  <option value="short">Short-term</option>
+                  <option value="medium">Medium-term</option>
+                  <option value="long">Long-term</option>
                 </select>
               </div>
             </div>
 
-            <button type="submit" className="submit-btn">
-              Post Job
+            <button type="submit" className="btn btn-primary" style={{ marginTop: '20px' }}>
+              ➕ Post Job
             </button>
           </form>
         </div>

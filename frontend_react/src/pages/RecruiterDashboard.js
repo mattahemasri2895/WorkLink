@@ -44,11 +44,14 @@ function RecruiterDashboard() {
       });
 
       if (res.ok) {
+        setSelectedApplicant(null);
         fetchData();
-        alert(`Application ${status}`);
+        alert(`Application ${status}!`);
+      } else {
+        alert("Failed to update status");
       }
     } catch (e) {
-      alert("Failed to update status");
+      alert("Error updating status");
     }
   };
 
@@ -138,21 +141,21 @@ function RecruiterDashboard() {
 
         <div className="section-card">
           <h3>💼 Active Jobs</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
             {jobs.slice(0, 6).map(job => (
               <div key={job.id} style={{ 
-                padding: '20px', 
+                padding: '16px', 
                 border: '1px solid #e2e8f0', 
-                borderRadius: '12px',
+                borderRadius: '8px',
                 background: 'white'
               }}>
-                <h4 style={{ marginBottom: '8px', fontSize: '18px' }}>{job.title}</h4>
-                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '12px' }}>
-                  {job.description.substring(0, 80)}...
+                <h4 style={{ marginBottom: '8px', fontSize: '16px' }}>{job.title}</h4>
+                <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '12px' }}>
+                  {job.description.substring(0, 60)}...
                 </p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span className={`status-badge ${job.status || 'open'}`}>{job.status || 'open'}</span>
-                  <span style={{ fontSize: '13px', color: '#64748b' }}>
+                  <span style={{ fontSize: '12px', color: '#64748b' }}>
                     {new Date(job.created_at).toLocaleDateString()}
                   </span>
                 </div>
@@ -164,43 +167,42 @@ function RecruiterDashboard() {
         <div className="section-card">
           <h3>👥 Recent Applicants</h3>
           {applications.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-              {applications.slice(0, 8).map(app => (
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {applications.slice(0, 10).map(app => (
                 <div key={app.id} style={{
-                  padding: '20px',
+                  padding: '16px',
                   border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
+                  borderRadius: '8px',
                   background: 'white',
-                  cursor: 'pointer'
-                }} onClick={() => setSelectedApplicant(app)}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  transition: 'all 0.2s'
+                }} onClick={() => setSelectedApplicant(app)}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = '#2563eb'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
                     <div style={{
-                      width: '48px',
-                      height: '48px',
+                      width: '40px',
+                      height: '40px',
                       borderRadius: '50%',
                       background: '#2563eb',
                       color: 'white',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '20px',
+                      fontSize: '16px',
                       fontWeight: 'bold'
                     }}>
                       {app.freelancer.charAt(0).toUpperCase()}
                     </div>
-                    <div>
-                      <h4 style={{ fontSize: '16px', marginBottom: '4px' }}>{app.freelancer}</h4>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ fontSize: '15px', marginBottom: '4px' }}>{app.freelancer}</h4>
                       <p style={{ fontSize: '13px', color: '#64748b' }}>{app.job}</p>
                     </div>
                   </div>
-                  {app.skills && (
-                    <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '12px' }}>
-                      <strong>Skills:</strong> {app.skills.substring(0, 60)}...
-                    </p>
-                  )}
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                    <span className={`status-badge ${app.status}`}>{app.status}</span>
-                  </div>
+                  <span className={`status-badge ${app.status}`}>{app.status}</span>
                 </div>
               ))}
             </div>

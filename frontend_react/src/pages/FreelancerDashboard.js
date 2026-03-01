@@ -12,7 +12,6 @@ function FreelancerDashboard() {
   const [wishlist, setWishlist] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [resumeUrl, setResumeUrl] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -20,20 +19,15 @@ function FreelancerDashboard() {
 
   const fetchData = async () => {
     try {
-      const [statsRes, appsRes, wishRes, profileRes] = await Promise.all([
+      const [statsRes, appsRes, wishRes] = await Promise.all([
         apiCall("http://localhost:8000/api/auth/freelancer/stats/", { method: "GET" }),
         apiCall("http://localhost:8000/api/auth/freelancer/applications/", { method: "GET" }),
-        apiCall("http://localhost:8000/api/auth/wishlist/", { method: "GET" }),
-        apiCall("http://localhost:8000/api/auth/freelancer/profile/", { method: "GET" })
+        apiCall("http://localhost:8000/api/auth/wishlist/", { method: "GET" })
       ]);
 
       if (statsRes.ok) setStats(await statsRes.json());
       if (appsRes.ok) setRecentApps(await appsRes.json());
       if (wishRes.ok) setWishlist(await wishRes.json());
-      if (profileRes.ok) {
-        const profile = await profileRes.json();
-        if (profile.resume) setResumeUrl(profile.resume);
-      }
     } catch (e) {
       console.error("Error loading dashboard:", e);
     } finally {
@@ -44,36 +38,12 @@ function FreelancerDashboard() {
   const removeFromWishlist = async (jobId) => {
     try {
       const res = await apiCall(`http://localhost:8000/api/auth/wishlist/${jobId}/`, { method: "DELETE" });
-      if (res.ok) setWishlist(wishlist.filter(w => w.job !== jobId));
-    } catch (e) {
-      alert("Failed to remove from wishlist");
-    }
-  };
-
-  const handleResumeUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append('resume', file);
-
-    try {
-      const res = await apiCall("http://localhost:8000/api/auth/resume/", {
-        method: "POST",
-        body: formData,
-        headers: {}
-      });
-
       if (res.ok) {
-        const data = await res.json();
-        setResumeUrl(data.resume);
-        alert("Resume uploaded successfully!");
-        fetchData();
-      } else {
-        alert("Failed to upload resume");
+        setWishlist(wishlist.filter(w => w.job !== jobId));
+        alert("Removed from wishlist");
       }
     } catch (e) {
-      alert("Error uploading resume");
+      alert("Failed to remove from wishlist");
     }
   };
 
@@ -109,7 +79,7 @@ function FreelancerDashboard() {
       <div className="main">
         <div className="page-header">
           <h1>📊 Freelancer Dashboard</h1>
-          <p>Track your applications, manage your profile, and explore opportunities</p>
+          <p>Track your applications and explore opportunities</p>
         </div>
 
         <div className="stats-grid">
@@ -161,22 +131,6 @@ function FreelancerDashboard() {
             <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
               {stats.profile_completion}%
             </div>
-          </div>
-        </div>
-
-        <div className="section-card">
-          <h3>📄 Resume Management</h3>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <label className="btn btn-primary" style={{ cursor: 'pointer' }}>
-              📤 Upload Resume
-              <input type="file" accept=".pdf,.doc,.docx" onChange={handleResumeUpload} style={{ display: 'none' }} />
-            </label>
-            {resumeUrl && (
-              <a href={resumeUrl} target="_blank" rel="noopener noreferrer" className="btn btn-success">
-                👁️ View Resume
-              </a>
-            )}
-            {!resumeUrl && <p style={{ color: '#64748b' }}>No resume uploaded yet</p>}
           </div>
         </div>
 

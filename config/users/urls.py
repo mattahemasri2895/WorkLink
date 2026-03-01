@@ -28,6 +28,7 @@ urlpatterns = [
     path('recruiter/application/<int:app_id>/status/', UpdateApplicationStatusView.as_view()),
     path('recruiter/stats/', RecruiterStatsView.as_view()),
     path('recruiter/profile/', RecruiterProfileView.as_view()),
+    path('recruiter/job/<int:job_id>/', JobManagementView.as_view()),
     path('resume/', ResumeView.as_view()),
     path('messages/', MessagesView.as_view()),
     path('notifications/', NotificationsView.as_view()),

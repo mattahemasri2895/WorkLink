@@ -488,6 +488,15 @@ body {
   margin-bottom: 20px;
 }
 
+.success-message {
+  background: #d1fae5;
+  color: #065f46;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid var(--success);
+  margin-bottom: 20px;
+}
+
 @media (max-width: 1024px) {
   .charts-row {
     grid-template-columns: 1fr;

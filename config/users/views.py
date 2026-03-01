@@ -141,11 +141,11 @@ class JobListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # recruiters should only see the jobs they created; freelancers see everything
         user = self.request.user
         if getattr(user, 'role', None) == 'recruiter':
             return Job.objects.filter(recruiter=user)
-        return Job.objects.all()
+        # Freelancers see only open jobs
+        return Job.objects.filter(status='open')
 
 
 # ---------------- APPLY TO JOB ----------------
@@ -154,15 +154,12 @@ class ApplyJobView(APIView):
 
     def post(self, request, job_id):
         try:
-            # Check if freelancer profile exists
             profile = FreelancerProfile.objects.filter(user=request.user).first()
             if not profile:
                 return Response({"error": "Create profile first"}, status=400)
 
-            # Get job
             job = Job.objects.get(id=job_id)
 
-            # Prevent duplicate application
             application, created = Application.objects.get_or_create(
                 job=job,
                 freelancer=request.user
@@ -171,7 +168,17 @@ class ApplyJobView(APIView):
             if not created:
                 return Response({"message": "Already applied"}, status=200)
 
-            # notify the recruiter about new application
+            # Copy resume to application
+            if profile.resume:
+                try:
+                    from django.core.files.base import ContentFile
+                    resume_content = profile.resume.read()
+                    resume_name = os.path.basename(profile.resume.name)
+                    application.resume_snapshot.save(resume_name, ContentFile(resume_content), save=True)
+                except Exception as e:
+                    logger.error(f"Failed to copy resume: {str(e)}")
+
+            # Notify recruiter
             try:
                 Notification.objects.create(
                     user=job.recruiter,
@@ -186,6 +193,7 @@ class ApplyJobView(APIView):
         except Job.DoesNotExist:
             return Response({"error": "Job not found"}, status=404)
         except Exception as e:
+            logger.exception('Error applying to job')
             return Response({"error": str(e)}, status=500)
 
 
@@ -303,6 +311,8 @@ class RecruiterApplicationsView(APIView):
                 "education": profile.education if profile else "",
                 "skills": profile.skills if profile else "",
                 "experience": profile.experience if profile else "",
+                "resume": profile.resume.url if profile and profile.resume else None,
+                "resume_snapshot": app.resume_snapshot.url if app.resume_snapshot else None,
             })
 
         return Response(result)
@@ -496,3 +506,40 @@ class RecruiterStatsView(APIView):
         except Exception as e:
             logger.exception('Error fetching recruiter stats')
             return Response({'error': str(e)}, status=500)
+
+
+
+# ---------------- JOB MANAGEMENT (RECRUITER) ----------------
+class JobManagementView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request, job_id):
+        try:
+            job = Job.objects.get(id=job_id, recruiter=request.user)
+            serializer = JobSerializer(job, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=400)
+        except Job.DoesNotExist:
+            return Response({'error': 'Job not found'}, status=404)
+
+    def delete(self, request, job_id):
+        try:
+            job = Job.objects.get(id=job_id, recruiter=request.user)
+            job.delete()
+            return Response({'message': 'Job deleted'}, status=200)
+        except Job.DoesNotExist:
+            return Response({'error': 'Job not found'}, status=404)
+
+    def patch(self, request, job_id):
+        try:
+            job = Job.objects.get(id=job_id, recruiter=request.user)
+            new_status = request.data.get('status', 'open')
+            if new_status not in ['open', 'closed']:
+                return Response({'error': 'Invalid status'}, status=400)
+            job.status = new_status
+            job.save()
+            return Response({'message': f'Job {new_status}', 'status': new_status})
+        except Job.DoesNotExist:
+            return Response({'error': 'Job not found'}, status=404)

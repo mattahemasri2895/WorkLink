@@ -47,30 +47,34 @@ function MyApplications() {
         </div>
 
         <div className="section-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
             <h3>All Applications ({applications.length})</h3>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button 
                 className={`btn ${filter === 'all' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setFilter('all')}
+                style={{ padding: '8px 16px', fontSize: '14px' }}
               >
                 All
               </button>
               <button 
                 className={`btn ${filter === 'pending' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setFilter('pending')}
+                style={{ padding: '8px 16px', fontSize: '14px' }}
               >
                 Pending
               </button>
               <button 
                 className={`btn ${filter === 'hired' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setFilter('hired')}
+                style={{ padding: '8px 16px', fontSize: '14px' }}
               >
                 Hired
               </button>
               <button 
                 className={`btn ${filter === 'rejected' ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setFilter('rejected')}
+                style={{ padding: '8px 16px', fontSize: '14px' }}
               >
                 Rejected
               </button>
@@ -83,19 +87,40 @@ function MyApplications() {
                 <div 
                   key={app.id} 
                   className="list-item"
-                  onClick={() => setSelectedApp(app)}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                    <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: '16px' }}>
+                    <div style={{ flex: 1 }}>
                       <h4 style={{ fontSize: '18px', marginBottom: '8px' }}>{app.job_title}</h4>
-                      <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '12px' }}>
+                      <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '8px' }}>
                         Applied on {new Date(app.applied_at).toLocaleDateString()}
                       </p>
+                      {app.resume_snapshot && (
+                        <p style={{ fontSize: '13px', color: '#10b981', marginBottom: '8px' }}>
+                          📄 Resume: {app.resume_snapshot.split('/').pop()}
+                        </p>
+                      )}
                       <span className={`status-badge ${app.status}`}>{app.status}</span>
                     </div>
-                    <button className="btn btn-primary" style={{ padding: '8px 16px' }}>
-                      View Details →
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {app.resume_snapshot && (
+                        <a 
+                          href={app.resume_snapshot} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="btn btn-success"
+                          style={{ padding: '8px 16px', fontSize: '14px', textDecoration: 'none' }}
+                        >
+                          👁️ View Resume
+                        </a>
+                      )}
+                      <button 
+                        className="btn btn-primary" 
+                        style={{ padding: '8px 16px', fontSize: '14px' }}
+                        onClick={() => setSelectedApp(app)}
+                      >
+                        View Details
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -118,6 +143,24 @@ function MyApplications() {
                 <p style={{ marginBottom: '16px' }}>
                   <strong>Applied on:</strong> {new Date(selectedApp.applied_at).toLocaleDateString()}
                 </p>
+                
+                {selectedApp.resume_snapshot && (
+                  <div style={{ marginBottom: '20px', padding: '12px', background: '#f8fafc', borderRadius: '8px' }}>
+                    <p style={{ marginBottom: '8px' }}><strong>📄 Submitted Resume:</strong></p>
+                    <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '8px' }}>
+                      {selectedApp.resume_snapshot.split('/').pop()}
+                    </p>
+                    <a 
+                      href={selectedApp.resume_snapshot} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="btn btn-success"
+                      style={{ padding: '8px 16px', fontSize: '14px', textDecoration: 'none', display: 'inline-block' }}
+                    >
+                      👁️ View Resume
+                    </a>
+                  </div>
+                )}
                 
                 {selectedApp.job_details && (
                   <>

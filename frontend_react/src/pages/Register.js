@@ -1,82 +1,133 @@
 import { useState } from "react";
-import axios from "axios";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import "./Auth.css";
 
 function Register() {
-  const [form, setForm] = useState({
-    username: "",
-    email: "",
-    password: "",
-    role: "freelancer",
-  });
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("freelancer");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
-      await axios.post(
-        "http://127.0.0.1:8000/api/auth/register/",
-        form
-      );
-      alert("Registration successful");
-      window.location.href = "/";
+      const res = await fetch("http://localhost:8000/api/auth/register/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password, role }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Registration successful! Please login.");
+        navigate("/");
+      } else {
+        setError(data.username?.[0] || data.email?.[0] || "Registration failed");
+      }
     } catch (err) {
-      alert("Registration failed");
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="auth-container">
-      <div className="auth-card">
-        <h2 className="auth-title">Join WorkLink</h2>
-        <p style={{ fontSize: "14px", color: "#64748b", marginBottom: "15px" }}>
-          Create your account to connect with top talent or discover exciting freelance opportunities.
-        </p>
+      <div className="auth-left">
+        <div className="auth-branding">
+          <h1>💼 WorkLink</h1>
+          <p className="tagline">Connect Talent with Opportunity</p>
+          <div className="features">
+            <div className="feature">
+              <span className="feature-icon">👥</span>
+              <div>
+                <h3>Join Thousands</h3>
+                <p>Be part of our growing community</p>
+              </div>
+            </div>
+            <div className="feature">
+              <span className="feature-icon">🔒</span>
+              <div>
+                <h3>Secure Platform</h3>
+                <p>Your data is safe with us</p>
+              </div>
+            </div>
+            <div className="feature">
+              <span className="feature-icon">⚡</span>
+              <div>
+                <h3>Quick Setup</h3>
+                <p>Get started in less than 2 minutes</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <form onSubmit={handleSubmit}>
-          <input
-            className="auth-input"
-            placeholder="Username"
-            onChange={(e) =>
-              setForm({ ...form, username: e.target.value })
-            }
-          />
+      <div className="auth-right">
+        <div className="auth-form-container">
+          <h2>Create Account</h2>
+          <p className="auth-subtitle">Join WorkLink today</p>
 
-          <input
-            className="auth-input"
-            placeholder="Email"
-            onChange={(e) =>
-              setForm({ ...form, email: e.target.value })
-            }
-          />
+          {error && <div className="auth-error">{error}</div>}
 
-          <input
-            className="auth-input"
-            type="password"
-            placeholder="Password"
-            onChange={(e) =>
-              setForm({ ...form, password: e.target.value })
-            }
-          />
+          <form onSubmit={handleSubmit} className="auth-form">
+            <div className="form-group">
+              <label>Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Choose a username"
+                required
+              />
+            </div>
 
-          <select
-            className="auth-input"
-            onChange={(e) =>
-              setForm({ ...form, role: e.target.value })
-            }
-          >
-            <option value="freelancer">Freelancer</option>
-            <option value="recruiter">Recruiter</option>
-          </select>
+            <div className="form-group">
+              <label>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                required
+              />
+            </div>
 
-          <button className="auth-button" type="submit">
-            Register
-          </button>
-        </form>
+            <div className="form-group">
+              <label>Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Create a password"
+                required
+              />
+            </div>
 
-        <div className="auth-link">
-          Already have an account?{" "}
-          <Link to="/">Login</Link>
+            <div className="form-group">
+              <label>I am a</label>
+              <select value={role} onChange={(e) => setRole(e.target.value)}>
+                <option value="freelancer">Freelancer</option>
+                <option value="recruiter">Recruiter</option>
+              </select>
+            </div>
+
+            <button type="submit" className="auth-btn" disabled={loading}>
+              {loading ? "Creating account..." : "Sign Up"}
+            </button>
+          </form>
+
+          <p className="auth-switch">
+            Already have an account?{" "}
+            <a href="/">Sign in</a>
+          </p>
         </div>
       </div>
     </div>

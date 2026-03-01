@@ -37,14 +37,19 @@ class Job(models.Model):
         ('long', 'Long-term (3+ months)'),
     )
     
+    STATUS_CHOICES = (
+        ('open', 'Open'),
+        ('closed', 'Closed'),
+    )
+    
     recruiter = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=100)
     description = models.TextField()
     requirements = models.TextField(blank=True, default="")
-    # make salary optional so frontend can post without specifying it initially
     salary = models.CharField(max_length=100, blank=True, default="")
     job_type = models.CharField(max_length=20, choices=JOB_TYPE_CHOICES, default='remote')
     duration = models.CharField(max_length=20, choices=DURATION_CHOICES, default='medium')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='open')
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -58,13 +63,49 @@ class Job(models.Model):
 class Application(models.Model):
     STATUS_CHOICES = (
         ('pending', 'Pending'),
+        ('shortlisted', 'Shortlisted'),
+        ('interview_scheduled', 'Interview Scheduled'),
+        ('exam_scheduled', 'Exam Scheduled'),
         ('hired', 'Hired'),
         ('rejected', 'Rejected'),
     )
 
     job = models.ForeignKey(Job, on_delete=models.CASCADE)
     freelancer = models.ForeignKey(User, on_delete=models.CASCADE)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='pending')
+    applied_at = models.DateTimeField(default=timezone.now)
+    resume_snapshot = models.FileField(upload_to='application_resumes/', blank=True, null=True)
+
+
+class InterviewSlot(models.Model):
+    application = models.ForeignKey(Application, on_delete=models.CASCADE, related_name='interview_slots')
+    scheduled_date = models.DateTimeField()
+    duration_minutes = models.IntegerField(default=30)
+    meeting_link = models.URLField(blank=True, default="")
+    notes = models.TextField(blank=True, default="")
+    is_completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(default=timezone.now)
+
+
+class ExamSlot(models.Model):
+    application = models.ForeignKey(Application, on_delete=models.CASCADE, related_name='exam_slots')
+    scheduled_date = models.DateTimeField()
+    duration_minutes = models.IntegerField(default=60)
+    exam_link = models.URLField(blank=True, default="")
+    instructions = models.TextField(blank=True, default="")
+    is_completed = models.BooleanField(default=False)
+    score = models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+
+class Wishlist(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    job = models.ForeignKey(Job, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ('user', 'job')
+        ordering = ['-created_at']
 
 
 class RecruiterProfile(models.Model):

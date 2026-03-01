@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import FreelancerProfile, Job, Application, RecruiterProfile, Message, Notification
+from .models import FreelancerProfile, Job, Application, RecruiterProfile, Message, Notification, Wishlist
 
 User = get_user_model()
 
@@ -31,21 +31,32 @@ class FreelancerProfileSerializer(serializers.ModelSerializer):
 
 class JobSerializer(serializers.ModelSerializer):
     recruiter_username = serializers.CharField(source='recruiter.username', read_only=True)
-    # allow salary to be blank so API won't reject empty salary strings
     salary = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = Job
         fields = ['id', 'title', 'description', 'requirements', 'salary', 'job_type', 'duration', 'recruiter_username', 'created_at', 'updated_at']
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['status'] = getattr(instance, 'status', 'open')
+        return data
+
 
 class ApplicationSerializer(serializers.ModelSerializer):
     freelancer_username = serializers.CharField(source='freelancer.username', read_only=True)
     job_title = serializers.CharField(source='job.title', read_only=True)
+    job_details = JobSerializer(source='job', read_only=True)
 
     class Meta:
         model = Application
-        fields = ['id', 'job', 'job_title', 'freelancer', 'freelancer_username', 'status']
+        fields = ['id', 'job', 'job_title', 'job_details', 'freelancer', 'freelancer_username', 'status', 'applied_at', 'resume_snapshot']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not data.get('applied_at'):
+            data['applied_at'] = instance.job.created_at if hasattr(instance, 'job') else None
+        return data
 
 
 class RecruiterProfileSerializer(serializers.ModelSerializer):
@@ -67,3 +78,12 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = ['id', 'user', 'notif_type', 'data', 'is_read', 'created_at']
+
+
+
+class WishlistSerializer(serializers.ModelSerializer):
+    job_details = JobSerializer(source='job', read_only=True)
+
+    class Meta:
+        model = Wishlist
+        fields = ['id', 'job', 'job_details', 'created_at']

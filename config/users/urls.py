@@ -19,11 +19,16 @@ urlpatterns = [
 
     path('jobs/create/', JobCreateView.as_view()),
     path('jobs/', JobListView.as_view()),
-    path('jobs/apply/<int:job_id>/', ApplyJobView.as_view()),
+    path('jobs/<int:job_id>/apply/', ApplyJobView.as_view()),
+
+    path('wishlist/', WishlistView.as_view()),
+    path('wishlist/<int:job_id>/', WishlistView.as_view()),
 
     path('recruiter/applications/', RecruiterApplicationsView.as_view()),
-    path('recruiter/update/<int:app_id>/', UpdateApplicationStatusView.as_view()),
+    path('recruiter/application/<int:app_id>/status/', UpdateApplicationStatusView.as_view()),
+    path('recruiter/stats/', RecruiterStatsView.as_view()),
     path('recruiter/profile/', RecruiterProfileView.as_view()),
+    path('resume/', ResumeView.as_view()),
     path('messages/', MessagesView.as_view()),
     path('notifications/', NotificationsView.as_view()),
 ]

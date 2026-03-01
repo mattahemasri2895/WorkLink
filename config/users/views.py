@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User, Job, Application, FreelancerProfile, RecruiterProfile, Message, Notification
+from .models import User, Job, Application, FreelancerProfile, RecruiterProfile, Message, Notification, Wishlist
 from .serializers import (
     RegisterSerializer,
     UserSerializer,
@@ -13,6 +13,7 @@ from .serializers import (
     RecruiterProfileSerializer,
     MessageSerializer,
     NotificationSerializer,
+    WishlistSerializer,
 )
 import traceback
 import logging
@@ -433,4 +434,65 @@ class ResumeView(APIView):
             return Response({'error': 'File not found'}, status=404)
         except Exception as e:
             logger.exception('Error serving resume')
+            return Response({'error': str(e)}, status=500)
+
+
+
+# ---------------- WISHLIST ----------------
+class WishlistView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        wishlists = Wishlist.objects.filter(user=request.user)
+        serializer = WishlistSerializer(wishlists, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        job_id = request.data.get('job_id')
+        try:
+            job = Job.objects.get(id=job_id)
+            wishlist, created = Wishlist.objects.get_or_create(user=request.user, job=job)
+            if created:
+                return Response({'message': 'Added to wishlist'}, status=201)
+            return Response({'message': 'Already in wishlist'}, status=200)
+        except Job.DoesNotExist:
+            return Response({'error': 'Job not found'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+    def delete(self, request, job_id):
+        try:
+            wishlist = Wishlist.objects.get(user=request.user, job_id=job_id)
+            wishlist.delete()
+            return Response({'message': 'Removed from wishlist'}, status=200)
+        except Wishlist.DoesNotExist:
+            return Response({'error': 'Not in wishlist'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
+
+# ---------------- RECRUITER STATS ----------------
+class RecruiterStatsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        try:
+            jobs = Job.objects.filter(recruiter=request.user)
+            applications = Application.objects.filter(job__in=jobs)
+            
+            total_jobs = jobs.count()
+            total_applications = applications.count()
+            pending = applications.filter(status='pending').count()
+            hired = applications.filter(status='hired').count()
+            rejected = applications.filter(status='rejected').count()
+
+            return Response({
+                'total_jobs': total_jobs,
+                'total_applications': total_applications,
+                'pending': pending,
+                'hired': hired,
+                'rejected': rejected,
+            })
+        except Exception as e:
+            logger.exception('Error fetching recruiter stats')
             return Response({'error': str(e)}, status=500)

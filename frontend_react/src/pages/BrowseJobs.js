@@ -1,318 +1,216 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import { apiCall } from "../utils/apiClient";
-import "./BrowseJobs.css";
 
 function BrowseJobs() {
-  const token = localStorage.getItem("token");
   const [jobs, setJobs] = useState([]);
-  const [filteredJobs, setFilteredJobs] = useState([]);
+  const [selectedJob, setSelectedJob] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [appliedJobs, setAppliedJobs] = useState(new Set());
-  const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // Filter states
-  const [searchQuery, setSearchQuery] = useState("");
-  const [jobType, setJobType] = useState("");
-  const [duration, setDuration] = useState("");
-  const [salaryRange, setSalaryRange] = useState("");
-
-  // Fetch jobs and user's applications on mount
   useEffect(() => {
     fetchJobs();
-    fetchMyApplications();
   }, []);
-
-  // Apply filters whenever filter state changes
-  useEffect(() => {
-    applyFilters();
-  }, [jobs, searchQuery, jobType, duration, salaryRange]);
 
   const fetchJobs = async () => {
     try {
-      setLoading(true);
-      const response = await apiCall("http://localhost:8000/api/auth/jobs/", {
-        method: "GET",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const res = await apiCall("http://localhost:8000/api/auth/jobs/", { method: "GET" });
+      if (res.ok) {
+        const data = await res.json();
         setJobs(data);
-        setError("");
-      } else {
-        setError("Failed to load jobs");
       }
-    } catch (err) {
-      setError("Network error: " + err.message);
+    } catch (e) {
+      console.error("Error fetching jobs:", e);
     } finally {
       setLoading(false);
     }
   };
 
-  const applyFilters = () => {
-    let filtered = jobs;
-
-    // Search filter
-    if (searchQuery.trim()) {
-      filtered = filtered.filter(
-        (job) =>
-          job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          job.description.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Job type filter
-    if (jobType) {
-      filtered = filtered.filter((job) => job.job_type === jobType);
-    }
-
-    // Duration filter
-    if (duration) {
-      filtered = filtered.filter((job) => job.duration === duration);
-    }
-
-    // Salary range filter
-    if (salaryRange) {
-      filtered = filtered.filter((job) => {
-        const salary = extractSalaryNumber(job.salary);
-        if (salaryRange === "0-500" && salary <= 500) return true;
-        if (salaryRange === "500-1000" && salary > 500 && salary <= 1000) return true;
-        if (salaryRange === "1000-5000" && salary > 1000 && salary <= 5000) return true;
-        if (salaryRange === "5000+" && salary > 5000) return true;
-        return false;
-      });
-    }
-
-    setFilteredJobs(filtered);
-  };
-
-  const extractSalaryNumber = (salary) => {
-    const match = salary.match(/\d+/);
-    return match ? parseInt(match[0]) : 0;
-  };
-
-  const fetchMyApplications = async () => {
+  const applyToJob = async (jobId) => {
     try {
-      const res = await apiCall("http://localhost:8000/api/auth/freelancer/applications/", { method: "GET" });
+      const res = await apiCall(`http://localhost:8000/api/auth/jobs/${jobId}/apply/`, {
+        method: "POST"
+      });
+
       if (res.ok) {
+        alert("Application submitted successfully!");
+        setSelectedJob(null);
+      } else {
         const data = await res.json();
-        const ids = new Set(data.map((a) => a.job));
-        setAppliedJobs(ids);
+        alert(data.error || "Failed to apply");
       }
     } catch (e) {
-      console.error('Failed to load my applications', e);
+      alert("Error applying to job");
     }
   };
 
-  const applyForJob = async (jobId) => {
-    if (!token) {
-      alert("Please login first");
-      return;
-    }
-
+  const addToWishlist = async (jobId) => {
     try {
-      const response = await apiCall(
-        `http://localhost:8000/api/auth/jobs/apply/${jobId}/`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-        }
-      );
+      const res = await apiCall("http://localhost:8000/api/auth/wishlist/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: jobId })
+      });
 
-      if (response.ok) {
-        setAppliedJobs((prev) => new Set(prev).add(jobId));
-        alert("✓ Applied successfully!");
-      } else {
-        const data = await response.json();
-        alert(data.message || data.error || "Application failed");
+      if (res.ok) {
+        alert("Added to wishlist!");
       }
-    } catch (err) {
-      alert("Error: " + err.message);
+    } catch (e) {
+      alert("Error adding to wishlist");
     }
   };
 
-  const clearFilters = () => {
-    setSearchQuery("");
-    setJobType("");
-    setDuration("");
-    setSalaryRange("");
-  };
+  const filteredJobs = jobs.filter(job => 
+    job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    job.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  if (loading) {
-    return (
-      <div className="app">
-        <Sidebar role="freelancer" />
-        <div className="main">
-          <div className="loading">Loading jobs...</div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="app">
+      <Sidebar role="freelancer" />
+      <div className="main"><div className="loading-spinner">Loading...</div></div>
+    </div>
+  );
 
   return (
     <div className="app">
       <Sidebar role="freelancer" />
-
       <div className="main">
-        {/* Header */}
-        <div className="browse-header">
-          <h1>Browse Jobs</h1>
+        <div className="page-header">
+          <h1>🔍 Browse Jobs</h1>
           <p>Discover opportunities that match your skills</p>
         </div>
 
-        {error && <div className="error-message">{error}</div>}
-
-        {/* Filters Section */}
-        <div className="filters-section">
-          <div className="filter-container">
-            {/* Search Bar */}
-            <div className="filter-group full-width">
-              <label>Search Jobs</label>
-              <input
-                type="text"
-                placeholder="Search by title or keyword..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="search-input"
-              />
-            </div>
-
-            {/* Job Type Filter */}
-            <div className="filter-group">
-              <label>Job Type</label>
-              <select value={jobType} onChange={(e) => setJobType(e.target.value)}>
-                <option value="">All Types</option>
-                <option value="remote">Remote</option>
-                <option value="onsite">On-site</option>
-                <option value="hybrid">Hybrid</option>
-              </select>
-            </div>
-
-            {/* Duration Filter */}
-            <div className="filter-group">
-              <label>Duration</label>
-              <select value={duration} onChange={(e) => setDuration(e.target.value)}>
-                <option value="">All Durations</option>
-                <option value="short">Short-term (&lt; 1 month)</option>
-                <option value="medium">Medium-term (1-3 months)</option>
-                <option value="long">Long-term (3+ months)</option>
-              </select>
-            </div>
-
-            {/* Salary Range Filter */}
-            <div className="filter-group">
-              <label>Salary Range</label>
-              <select value={salaryRange} onChange={(e) => setSalaryRange(e.target.value)}>
-                <option value="">All Budgets</option>
-                <option value="0-500">$0 - $500</option>
-                <option value="500-1000">$500 - $1,000</option>
-                <option value="1000-5000">$1,000 - $5,000</option>
-                <option value="5000+">$5,000+</option>
-              </select>
-            </div>
-
-            {/* Clear Button */}
-            <button className="clear-btn" onClick={clearFilters}>
-              Clear Filters
-            </button>
+        <div className="section-card">
+          <div style={{ marginBottom: '24px' }}>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="🔍 Search jobs by title or description..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-        </div>
 
-        {/* Results Count */}
-        <div className="results-info">
-          Showing <strong>{filteredJobs.length}</strong> of <strong>{jobs.length}</strong> jobs
-        </div>
+          <h3 style={{ marginBottom: '20px' }}>Available Jobs ({filteredJobs.length})</h3>
 
-        {/* Jobs Grid */}
-        <div className="jobs-grid">
           {filteredJobs.length > 0 ? (
-            filteredJobs.map((job) => (
-              <div className="job-card" key={job.id}>
-                {/* Job Header */}
-                <div className="job-header">
-                  <div>
-                    <h3 className="job-title">{job.title}</h3>
-                    <p className="recruiter-name">by {job.recruiter_username}</p>
-                  </div>
-                  <span className={`job-type-badge ${job.job_type}`}>
-                    {job.job_type === "remote" && "🌐 Remote"}
-                    {job.job_type === "onsite" && "🏢 On-site"}
-                    {job.job_type === "hybrid" && "🔀 Hybrid"}
-                  </span>
-                </div>
-
-                {/* Job Description */}
-                <p className="job-description">{job.description.substring(0, 150)}...</p>
-
-                {/* Job Meta Info */}
-                <div className="job-meta">
-                  <div className="meta-item">
-                    <span className="meta-label">💰 Budget:</span>
-                    <span className="meta-value">{job.salary}</span>
-                  </div>
-                  <div className="meta-item">
-                    <span className="meta-label">⏱️ Duration:</span>
-                    <span className="meta-value">
-                      {job.duration === "short" && "Short-term"}
-                      {job.duration === "medium" && "Medium-term"}
-                      {job.duration === "long" && "Long-term"}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
+              {filteredJobs.map(job => (
+                <div key={job.id} style={{
+                  padding: '24px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  background: 'white',
+                  transition: 'all 0.2s',
+                  cursor: 'pointer'
+                }} onClick={() => setSelectedJob(job)}>
+                  <h4 style={{ fontSize: '20px', marginBottom: '12px', color: '#2563eb' }}>{job.title}</h4>
+                  <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px', lineHeight: '1.6' }}>
+                    {job.description.substring(0, 120)}...
+                  </p>
+                  
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                    <span style={{ 
+                      padding: '4px 12px', 
+                      background: '#dbeafe', 
+                      color: '#1e40af', 
+                      borderRadius: '20px', 
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}>
+                      {job.job_type}
+                    </span>
+                    <span style={{ 
+                      padding: '4px 12px', 
+                      background: '#fef3c7', 
+                      color: '#92400e', 
+                      borderRadius: '20px', 
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}>
+                      {job.duration}
                     </span>
                   </div>
-                </div>
-
-                {/* Requirements */}
-                {job.requirements && (
-                  <div className="job-requirements">
-                    <p className="req-label">📋 Requirements:</p>
-                    <p className="req-text">{job.requirements.substring(0, 80)}...</p>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <p style={{ fontSize: '16px', fontWeight: '700', color: '#10b981' }}>
+                      {job.salary || "Salary not specified"}
+                    </p>
+                    <button className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '14px' }}>
+                      View Details →
+                    </button>
                   </div>
-                )}
-
-                {/* Action Button */}
-                <div className="job-actions">
-                  <button
-                    className={`apply-btn ${appliedJobs.has(job.id) ? "applied" : ""}`}
-                    onClick={() => applyForJob(job.id)}
-                    disabled={appliedJobs.has(job.id)}
-                  >
-                    {appliedJobs.has(job.id) ? "✓ Applied" : "Apply Now"}
-                  </button>
                 </div>
-
-                {/* Posted Date */}
-                <p className="job-posted">
-                  Posted {formatDate(job.created_at)}
-                </p>
-              </div>
-            ))
-          ) : (
-            <div className="no-results">
-              <p>📭 No jobs found matching your filters</p>
-              <button className="clear-btn" onClick={clearFilters}>
-                Clear Filters
-              </button>
+              ))}
             </div>
+          ) : (
+            <p className="empty-state">No jobs found</p>
           )}
         </div>
+
+        {selectedJob && (
+          <div className="modal-overlay" onClick={() => setSelectedJob(null)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '700px' }}>
+              <button className="close-btn" onClick={() => setSelectedJob(null)}>✕</button>
+              <h2 style={{ marginBottom: '24px', fontSize: '32px', color: '#2563eb' }}>{selectedJob.title}</h2>
+              
+              <div style={{ lineHeight: '1.8' }}>
+                <div style={{ 
+                  padding: '16px', 
+                  background: '#f8fafc', 
+                  borderRadius: '8px', 
+                  marginBottom: '24px',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '16px'
+                }}>
+                  <div>
+                    <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>💰 Salary</p>
+                    <p style={{ fontWeight: '600', color: '#10b981' }}>{selectedJob.salary || "Not specified"}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>📍 Type</p>
+                    <p style={{ fontWeight: '600' }}>{selectedJob.job_type}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>⏱️ Duration</p>
+                    <p style={{ fontWeight: '600' }}>{selectedJob.duration}</p>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '4px' }}>👤 Recruiter</p>
+                    <p style={{ fontWeight: '600' }}>{selectedJob.recruiter_username}</p>
+                  </div>
+                </div>
+                
+                <p style={{ marginBottom: '12px', fontSize: '18px', fontWeight: '600' }}>📝 Description</p>
+                <p style={{ color: '#64748b', marginBottom: '24px', lineHeight: '1.8' }}>{selectedJob.description}</p>
+                
+                <p style={{ marginBottom: '12px', fontSize: '18px', fontWeight: '600' }}>✅ Requirements</p>
+                <p style={{ color: '#64748b', marginBottom: '32px', lineHeight: '1.8' }}>{selectedJob.requirements || "Not specified"}</p>
+                
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => applyToJob(selectedJob.id)}
+                    style={{ flex: 1 }}
+                  >
+                    ✅ Apply Now
+                  </button>
+                  <button 
+                    className="btn btn-secondary"
+                    onClick={() => addToWishlist(selectedJob.id)}
+                  >
+                    ⭐ Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
-const formatDate = (dateString) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diff = now - date;
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-  if (days === 0) return "today";
-  if (days === 1) return "yesterday";
-  if (days < 7) return `${days} days ago`;
-  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
-  return `${Math.floor(days / 30)} months ago`;
-};
 
 export default BrowseJobs;

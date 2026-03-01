@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Endpoint Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        const token = localStorage.getItem('access_token');
+        const results = document.getElementById('results');
+        
+        async function testEndpoint(url, name) {
+            try {
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                results.innerHTML += `<h3>${name}: ${res.status}</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (e) {
+                results.innerHTML += `<h3>${name}: ERROR</h3><pre>${e.message}</pre>`;
+            }
+        }
+        
+        // Test endpoints
+        testEndpoint('http://localhost:8000/api/auth/jobs/', 'Jobs List');
+        testEndpoint('http://localhost:8000/api/auth/freelancer/stats/', 'Freelancer Stats');
+        testEndpoint('http://localhost:8000/api/auth/freelancer/applications/', 'Applications');
+    </script>
+</body>
+</html>

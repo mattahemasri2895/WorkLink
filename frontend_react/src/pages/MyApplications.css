@@ -1,0 +1,219 @@
+.page-header-box {
+  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
+  color: white;
+  padding: 30px 35px;
+  border-radius: 16px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 20px rgba(20, 184, 166, 0.2);
+}
+
+.page-header-box h1 {
+  margin: 0 0 8px 0;
+  font-size: 1.8em;
+  color: white;
+}
+
+.page-header-box p {
+  margin: 0;
+  opacity: 0.95;
+  font-size: 1.05em;
+}
+
+.page-header {
+  margin-bottom: 30px;
+}
+
+.page-header h1 {
+  color: var(--text-dark);
+  font-size: 2em;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: var(--text-light);
+  font-size: 1.1em;
+}
+
+.applications-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.application-card {
+  background: white;
+  padding: 25px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(20, 184, 166, 0.08);
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.application-card:hover {
+  border-color: #14b8a6;
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(20, 184, 166, 0.15);
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+  gap: 15px;
+}
+
+.app-header h3 {
+  color: var(--text-dark);
+  margin: 0;
+  font-size: 1.2em;
+  flex: 1;
+}
+
+.status-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.status-badge.shortlisted {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.interview_scheduled {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.exam_scheduled {
+  background: #fce7f3;
+  color: #9f1239;
+}
+
+.status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.hired {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.app-meta p {
+  margin: 8px 0;
+  color: var(--text-light);
+  font-size: 0.95em;
+}
+
+.app-meta strong {
+  color: #14b8a6;
+}
+
+.empty-state-card {
+  background: white;
+  padding: 60px 40px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.08);
+  border: 1px solid var(--border);
+}
+
+.empty-icon {
+  font-size: 4em;
+  margin-bottom: 20px;
+}
+
+.empty-state-card h3 {
+  color: var(--text-dark);
+  margin-bottom: 10px;
+}
+
+.empty-state-card p {
+  color: var(--text-light);
+  font-size: 1.1em;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: white;
+  padding: 35px;
+  border-radius: 20px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content h2 {
+  color: #14b8a6;
+  margin-bottom: 20px;
+}
+
+.close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: var(--hover);
+  border: none;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2em;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background: var(--danger);
+  color: white;
+  transform: rotate(90deg);
+}
+
+.job-details p {
+  margin: 15px 0;
+  line-height: 1.6;
+  color: var(--text-dark);
+}
+
+.job-details strong {
+  color: #14b8a6;
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: 50px;
+  font-size: 1.2em;
+  color: #14b8a6;
+}
+
+@media (max-width: 768px) {
+  .applications-grid {
+    grid-template-columns: 1fr;
+  }
+}

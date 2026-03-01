@@ -1,0 +1,105 @@
+/* Global Blue Theme Overrides */
+:root {
+  --primary: #2563eb !important;
+  --primary-dark: #1e40af !important;
+  --secondary: #3b82f6 !important;
+  --accent: #60a5fa !important;
+  --background: #eff6ff !important;
+  --border: #dbeafe !important;
+  --hover: #e0f2fe !important;
+  --text-dark: #1e3a8a !important;
+}
+
+/* Override all teal colors to blue */
+.page-header-box {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.2) !important;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2) !important;
+}
+
+.chart-card, .section-card, .small-stat-card {
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.08) !important;
+}
+
+.completion-overlay, .big-number {
+  color: #2563eb !important;
+}
+
+.job-card {
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.08) !important;
+}
+
+.job-card:hover {
+  box-shadow: 0 8px 30px rgba(37, 99, 235, 0.2) !important;
+  border-color: #2563eb !important;
+}
+
+.wishlist-btn {
+  background: #dbeafe !important;
+  color: #2563eb !important;
+}
+
+.wishlist-btn:hover {
+  background: #bfdbfe !important;
+  border-color: #2563eb !important;
+}
+
+.apply-btn {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
+}
+
+.apply-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4) !important;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
+}
+
+.submit-btn:hover {
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+}
+
+.results-info {
+  background-color: #dbeafe !important;
+  border-left-color: #2563eb !important;
+}
+
+.results-info strong, .meta-value, .app-meta strong, .job-details strong, .modal-content h2, .applicant-skills strong {
+  color: #2563eb !important;
+}
+
+.filter-group input:focus, .filter-group select:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+}
+
+.application-card:hover {
+  border-color: #2563eb !important;
+  box-shadow: 0 8px 30px rgba(37, 99, 235, 0.15) !important;
+}
+
+.applicant-card:hover {
+  border-color: #2563eb !important;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15) !important;
+}
+
+.avatar {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
+}
+
+.loading-spinner {
+  color: #2563eb !important;
+}
+
+.app-item:hover, .wishlist-item:hover {
+  background: #dbeafe !important;
+}
+
+.filters-section {
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.08) !important;
+}

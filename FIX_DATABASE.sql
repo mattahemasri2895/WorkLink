@@ -1,25 +1,14 @@
--- RUN THIS IN pgAdmin TO FIX JOBS AND APPLICATIONS LOADING ISSUE
--- Database: freelance_db
+-- Add missing columns to users_application table
+ALTER TABLE users_application ADD COLUMN IF NOT EXISTS offer_letter VARCHAR(100);
+ALTER TABLE users_application ADD COLUMN IF NOT EXISTS offer_message TEXT DEFAULT '';
 
--- 1. Check current job status values
-SELECT id, title, status FROM users_job LIMIT 10;
+-- Update status column to support new workflow statuses
+ALTER TABLE users_application DROP CONSTRAINT IF EXISTS users_application_status_check;
+ALTER TABLE users_application ADD CONSTRAINT users_application_status_check 
+CHECK (status IN ('pending', 'accepted', 'rejected', 'interview_scheduled', 'interview_completed', 'interview_rejected', 'selected', 'offer_sent', 'offer_accepted', 'hired', 'shortlisted', 'exam_scheduled'));
 
--- 2. Update any NULL or empty status values to 'open'
-UPDATE users_job SET status = 'open' WHERE status IS NULL OR status = '';
+-- Add is_selected column to users_interviewslot if not exists
+ALTER TABLE users_interviewslot ADD COLUMN IF NOT EXISTS is_selected BOOLEAN DEFAULT FALSE;
 
--- 3. Verify all jobs now have status
-SELECT COUNT(*) as total_jobs, 
-       COUNT(CASE WHEN status = 'open' THEN 1 END) as open_jobs,
-       COUNT(CASE WHEN status = 'closed' THEN 1 END) as closed_jobs
-FROM users_job;
-
--- 4. Check applications
-SELECT COUNT(*) as total_applications FROM users_application;
-
--- 5. Check if there are any users
-SELECT id, username, role FROM users_user LIMIT 5;
-
--- AFTER RUNNING THESE QUERIES:
--- 1. Restart Django server
--- 2. Clear browser cache (Ctrl+Shift+Delete)
--- 3. Refresh frontend
+-- Verify the changes
+SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'users_application';

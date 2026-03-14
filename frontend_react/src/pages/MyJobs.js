@@ -46,33 +46,6 @@ function MyJobs() {
     }
   };
 
-  const deleteJob = async (jobId) => {
-    if (!window.confirm("Are you sure you want to delete this job?")) return;
-
-    try {
-      const token = localStorage.getItem('access_token');
-      const res = await fetch(`http://localhost:8000/api/auth/recruiter/job/${jobId}/`, {
-        method: "DELETE",
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (res.ok) {
-        fetchJobs();
-        alert("Job deleted successfully!");
-      } else {
-        const text = await res.text();
-        console.error("Delete failed:", text);
-        alert("Failed to delete job");
-      }
-    } catch (e) {
-      console.error("Error deleting job:", e);
-      alert("Error deleting job");
-    }
-  };
-
   const startEdit = (job) => {
     setEditData({
       title: job.title,
@@ -182,13 +155,6 @@ function MyJobs() {
                         style={{ padding: '8px 16px', fontSize: '14px' }}
                       >
                         ✏️ Edit
-                      </button>
-                      <button 
-                        className="btn btn-danger"
-                        onClick={() => deleteJob(job.id)}
-                        style={{ padding: '8px 16px', fontSize: '14px' }}
-                      >
-                        🗑️ Delete
                       </button>
                     </div>
                   </div>

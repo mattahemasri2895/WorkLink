@@ -1,9 +1,9 @@
-from rest_framework import generics, permissions
+﻿from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User, Job, Application, FreelancerProfile, RecruiterProfile, Message, Notification, Wishlist
+from .models import User, Job, Application, FreelancerProfile, RecruiterProfile, Message, Notification, Wishlist, InterviewSlot
 from .serializers import (
     RegisterSerializer,
     UserSerializer,
@@ -370,22 +370,46 @@ class UpdateApplicationStatusView(APIView):
         try:
             application = Application.objects.get(id=app_id)
             status = request.data.get("status")
+            action = request.data.get("action", "")
 
-            if status not in ["pending", "hired", "rejected"]:
+            valid_statuses = ["pending", "accepted", "rejected", "interview_scheduled", 
+                            "interview_completed", "interview_rejected", "selected", 
+                            "offer_sent", "offer_accepted", "hired"]
+            
+            if status not in valid_statuses:
                 return Response({"error": "Invalid status"}, status=400)
 
             application.status = status
             application.save()
 
-            # notify freelancer about status change
-            try:
-                Notification.objects.create(
-                    user=application.freelancer,
-                    notif_type='application_status',
-                    data={'job_title': application.job.title, 'status': status}
-                )
-            except Exception:
-                logger.exception('Failed to create notification for freelancer')
+            # Create notification and message based on action
+            message_text = ""
+            if action == "accept":
+                message_text = f"Congratulations! Your application for {application.job.title} has been accepted. You will receive interview details soon."
+            elif action == "reject":
+                message_text = f"Thank you for your interest in {application.job.title}. Unfortunately, your application was not selected at this time."
+            elif action == "interview_reject":
+                message_text = f"Thank you for attending the interview for {application.job.title}. We have decided to move forward with other candidates."
+            elif action == "select":
+                message_text = f"Congratulations! You have been selected for {application.job.title}. An offer letter will be shared soon."
+            elif action == "send_offer":
+                message_text = f"Congratulations! Please review and accept the offer letter for {application.job.title}."
+            
+            if message_text:
+                try:
+                    Message.objects.create(
+                        sender=application.job.recruiter,
+                        recipient=application.freelancer,
+                        subject=f"Application Update: {application.job.title}",
+                        body=message_text
+                    )
+                    Notification.objects.create(
+                        user=application.freelancer,
+                        notif_type='application_status',
+                        data={'job_title': application.job.title, 'status': status, 'action': action}
+                    )
+                except Exception:
+                    logger.exception('Failed to create notification')
 
             return Response({"message": "Status updated"})
 
@@ -543,3 +567,247 @@ class JobManagementView(APIView):
             return Response({'message': f'Job {new_status}', 'status': new_status})
         except Job.DoesNotExist:
             return Response({'error': 'Job not found'}, status=404)
+
+
+
+# ---------------- SCHEDULE INTERVIEW ----------------
+class ScheduleInterviewView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, app_id):
+        try:
+            application = Application.objects.get(id=app_id, job__recruiter=request.user)
+            
+            slots = request.data.get('slots', [])
+            
+            if not slots:
+                return Response({'error': 'No slots provided'}, status=400)
+            
+            application.status = 'accepted'
+            application.save()
+            
+            slots_text = "Available Interview Slots:\n\n"
+            for i, slot in enumerate(slots, 1):
+                slots_text += f"Slot {i}:\n"
+                slots_text += f"  Date & Time: {slot.get('scheduled_date', 'Not specified')}\n"
+                slots_text += f"  Duration: {slot.get('duration_minutes', 30)} minutes\n"
+                if slot.get('meeting_link'):
+                    slots_text += f"  Meeting Link: {slot.get('meeting_link')}\n"
+                if slot.get('notes'):
+                    slots_text += f"  Notes: {slot.get('notes')}\n"
+                slots_text += "\n"
+            
+            slots_text += "Please reply with your preferred slot number."
+            
+            try:
+                Message.objects.create(
+                    sender=request.user,
+                    recipient=application.freelancer,
+                    subject=f"Interview Invitation: {application.job.title}",
+                    body=f"Congratulations! You have been selected for the interview round for {application.job.title}.\n\n{slots_text}"
+                )
+                
+                Notification.objects.create(
+                    user=application.freelancer,
+                    notif_type='interview_slots_available',
+                    data={'job_title': application.job.title, 'application_id': application.id}
+                )
+            except Exception as e:
+                logger.exception('Failed to send message')
+                return Response({'error': 'Failed to send message'}, status=500)
+            
+            return Response({'message': 'Interview slots sent successfully'}, status=201)
+            
+        except Application.DoesNotExist:
+            return Response({'error': 'Application not found'}, status=404)
+        except Exception as e:
+            logger.exception('Error scheduling interview')
+            return Response({'error': str(e)}, status=500)
+
+
+# ---------------- FREELANCER INTERVIEWS ----------------
+class FreelancerInterviewsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        try:
+            applications = Application.objects.filter(freelancer=request.user)
+            interviews = InterviewSlot.objects.filter(application__in=applications)
+            
+            result = []
+            for interview in interviews:
+                result.append({
+                    'id': interview.id,
+                    'job_title': interview.application.job.title,
+                    'recruiter': interview.application.job.recruiter.username,
+                    'scheduled_date': interview.scheduled_date,
+                    'duration_minutes': interview.duration_minutes,
+                    'meeting_link': interview.meeting_link,
+                    'notes': interview.notes,
+                    'is_completed': interview.is_completed
+                })
+            
+            return Response(result)
+        except Exception as e:
+            logger.exception('Error fetching interviews')
+            return Response({'error': str(e)}, status=500)
+
+
+# ---------------- RECRUITER INTERVIEWS ----------------
+class RecruiterInterviewsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        try:
+            jobs = Job.objects.filter(recruiter=request.user)
+            applications = Application.objects.filter(job__in=jobs)
+            interviews = InterviewSlot.objects.filter(application__in=applications)
+            
+            result = []
+            for interview in interviews:
+                result.append({
+                    'id': interview.id,
+                    'job_title': interview.application.job.title,
+                    'freelancer': interview.application.freelancer.username,
+                    'scheduled_date': interview.scheduled_date,
+                    'duration_minutes': interview.duration_minutes,
+                    'meeting_link': interview.meeting_link,
+                    'notes': interview.notes,
+                    'is_completed': interview.is_completed
+                })
+            
+            return Response(result)
+        except Exception as e:
+            logger.exception('Error fetching interviews')
+            return Response({'error': str(e)}, status=500)
+
+
+
+# ---------------- SELECT INTERVIEW SLOT ----------------
+class SelectInterviewSlotView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, slot_id):
+        try:
+            slot = InterviewSlot.objects.get(id=slot_id, application__freelancer=request.user)
+            application = slot.application
+            
+            # Mark all other slots as not selected
+            InterviewSlot.objects.filter(application=application).update(is_selected=False)
+            
+            # Mark this slot as selected
+            slot.is_selected = True
+            slot.save()
+            
+            application.status = 'interview_scheduled'
+            application.save()
+            
+            # Send confirmation message
+            try:
+                Message.objects.create(
+                    sender=request.user,
+                    recipient=application.job.recruiter,
+                    subject=f"Interview Slot Confirmed: {application.job.title}",
+                    body=f"Interview slot confirmed for {slot.scheduled_date.strftime('%Y-%m-%d %H:%M')}. Duration: {slot.duration_minutes} minutes."
+                )
+                Message.objects.create(
+                    sender=application.job.recruiter,
+                    recipient=request.user,
+                    subject=f"Interview Confirmation: {application.job.title}",
+                    body=f"Your interview is confirmed for {slot.scheduled_date.strftime('%Y-%m-%d %H:%M')}. Duration: {slot.duration_minutes} minutes. Meeting Link: {slot.meeting_link}"
+                )
+            except Exception:
+                logger.exception('Failed to send confirmation')
+            
+            return Response({'message': 'Slot selected successfully'})
+        except InterviewSlot.DoesNotExist:
+            return Response({'error': 'Slot not found'}, status=404)
+
+
+# ---------------- GET INTERVIEW SLOTS ----------------
+class GetInterviewSlotsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, app_id):
+        try:
+            application = Application.objects.get(id=app_id, freelancer=request.user)
+            slots = InterviewSlot.objects.filter(application=application)
+            
+            result = []
+            for slot in slots:
+                result.append({
+                    'id': slot.id,
+                    'scheduled_date': slot.scheduled_date,
+                    'duration_minutes': slot.duration_minutes,
+                    'meeting_link': slot.meeting_link,
+                    'notes': slot.notes,
+                    'is_selected': slot.is_selected
+                })
+            
+            return Response(result)
+        except Application.DoesNotExist:
+            return Response({'error': 'Application not found'}, status=404)
+
+
+# ---------------- SEND OFFER LETTER ----------------
+class SendOfferLetterView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request, app_id):
+        try:
+            application = Application.objects.get(id=app_id, job__recruiter=request.user)
+            
+            offer_file = request.FILES.get('offer_letter')
+            offer_message = request.data.get('offer_message', '')
+            
+            if offer_file:
+                application.offer_letter = offer_file
+            application.offer_message = offer_message
+            application.status = 'offer_sent'
+            application.save()
+            
+            try:
+                Message.objects.create(
+                    sender=request.user,
+                    recipient=application.freelancer,
+                    subject=f"Job Offer: {application.job.title}",
+                    body=f"Congratulations! We are pleased to offer you the position. {offer_message}"
+                )
+                Notification.objects.create(
+                    user=application.freelancer,
+                    notif_type='offer_received',
+                    data={'job_title': application.job.title, 'application_id': application.id}
+                )
+            except Exception:
+                logger.exception('Failed to send offer notification')
+            
+            return Response({'message': 'Offer letter sent successfully'})
+        except Application.DoesNotExist:
+            return Response({'error': 'Application not found'}, status=404)
+
+
+# ---------------- ACCEPT OFFER ----------------
+class AcceptOfferView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, app_id):
+        try:
+            application = Application.objects.get(id=app_id, freelancer=request.user)
+            
+            application.status = 'hired'
+            application.save()
+            
+            try:
+                Message.objects.create(
+                    sender=request.user,
+                    recipient=application.job.recruiter,
+                    subject=f"Offer Accepted: {application.job.title}",
+                    body=f"{request.user.username} has accepted the job offer for {application.job.title}."
+                )
+            except Exception:
+                logger.exception('Failed to send acceptance notification')
+            
+            return Response({'message': 'Offer accepted successfully'})
+        except Application.DoesNotExist:
+            return Response({'error': 'Application not found'}, status=404)

@@ -10,11 +10,9 @@ function Sidebar({ role }) {
   useEffect(() => {
     let interval;
     const listener = () => fetchCounts();
-    if (role === 'freelancer') {
-      fetchCounts();
-      interval = setInterval(fetchCounts, 30000); // refresh every 30s
-      window.addEventListener('countsUpdated', listener);
-    }
+    fetchCounts();
+    interval = setInterval(fetchCounts, 30000);
+    window.addEventListener('countsUpdated', listener);
     return () => {
       clearInterval(interval);
       window.removeEventListener('countsUpdated', listener);
@@ -23,12 +21,19 @@ function Sidebar({ role }) {
 
   const fetchCounts = async () => {
     try {
-      const res1 = await apiCall("http://localhost:8000/api/auth/freelancer/messages/", { method: "GET" });
+      const msgEndpoint = role === 'freelancer' 
+        ? "http://localhost:8000/api/auth/freelancer/messages/"
+        : "http://localhost:8000/api/auth/messages/";
+      const notifEndpoint = role === 'freelancer'
+        ? "http://localhost:8000/api/auth/freelancer/notifications/"
+        : "http://localhost:8000/api/auth/notifications/";
+      
+      const res1 = await apiCall(msgEndpoint, { method: "GET" });
       if (res1.ok) {
         const msgs = await res1.json();
         setUnreadMessages(msgs.filter(m => !m.is_read).length);
       }
-      const res2 = await apiCall("http://localhost:8000/api/auth/freelancer/notifications/", { method: "GET" });
+      const res2 = await apiCall(notifEndpoint, { method: "GET" });
       if (res2.ok) {
         const data = await res2.json();
         setUnreadNotifications(data.unread);
@@ -71,6 +76,10 @@ function Sidebar({ role }) {
               <span className="nav-icon">📋</span>
               {!isCollapsed && <span className="nav-text">My Applications</span>}
             </Link>
+            <Link to="/interviews" className="nav-item" title="Interviews">
+              <span className="nav-icon">📅</span>
+              {!isCollapsed && <span className="nav-text">Interviews</span>}
+            </Link>
             <Link to="/messages" className="nav-item" title="Messages">
               <span className="nav-icon">✉️</span>
               {!isCollapsed && <span className="nav-text">Messages</span>}
@@ -84,6 +93,15 @@ function Sidebar({ role }) {
             <Link to="/freelancer-profile" className="nav-item" title="Profile">
               <span className="nav-icon">👤</span>
               {!isCollapsed && <span className="nav-text">Profile</span>}
+            </Link>
+            <div style={{ borderTop: '1px solid #e2e8f0', margin: '12px 0' }}></div>
+            <Link to="/settings" className="nav-item" title="Settings">
+              <span className="nav-icon">⚙️</span>
+              {!isCollapsed && <span className="nav-text">Settings</span>}
+            </Link>
+            <Link to="/help" className="nav-item" title="Help">
+              <span className="nav-icon">❓</span>
+              {!isCollapsed && <span className="nav-text">Help</span>}
             </Link>
           </>
         )}
@@ -106,9 +124,32 @@ function Sidebar({ role }) {
               <span className="nav-icon">👥</span>
               {!isCollapsed && <span className="nav-text">Applicants</span>}
             </Link>
+            <Link to="/interviews" className="nav-item" title="Interviews">
+              <span className="nav-icon">📅</span>
+              {!isCollapsed && <span className="nav-text">Interviews</span>}
+            </Link>
+            <Link to="/messages" className="nav-item" title="Messages">
+              <span className="nav-icon">✉️</span>
+              {!isCollapsed && <span className="nav-text">Messages</span>}
+              {unreadMessages > 0 && <span className="badge">{unreadMessages}</span>}
+            </Link>
+            <Link to="/notifications" className="nav-item" title="Notifications">
+              <span className="nav-icon">🔔</span>
+              {!isCollapsed && <span className="nav-text">Notifications</span>}
+              {unreadNotifications > 0 && <span className="badge">{unreadNotifications}</span>}
+            </Link>
             <Link to="/recruiter-profile" className="nav-item" title="Profile">
               <span className="nav-icon">👤</span>
               {!isCollapsed && <span className="nav-text">Profile</span>}
+            </Link>
+            <div style={{ borderTop: '1px solid #e2e8f0', margin: '12px 0' }}></div>
+            <Link to="/settings" className="nav-item" title="Settings">
+              <span className="nav-icon">⚙️</span>
+              {!isCollapsed && <span className="nav-text">Settings</span>}
+            </Link>
+            <Link to="/help" className="nav-item" title="Help">
+              <span className="nav-icon">❓</span>
+              {!isCollapsed && <span className="nav-text">Help</span>}
             </Link>
           </>
         )}

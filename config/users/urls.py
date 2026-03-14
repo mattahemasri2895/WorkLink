@@ -26,10 +26,17 @@ urlpatterns = [
 
     path('recruiter/applications/', RecruiterApplicationsView.as_view()),
     path('recruiter/application/<int:app_id>/status/', UpdateApplicationStatusView.as_view()),
+    path('recruiter/application/<int:app_id>/schedule-interview/', ScheduleInterviewView.as_view()),
+    path('recruiter/application/<int:app_id>/send-offer/', SendOfferLetterView.as_view()),
+    path('recruiter/interviews/', RecruiterInterviewsView.as_view()),
     path('recruiter/stats/', RecruiterStatsView.as_view()),
     path('recruiter/profile/', RecruiterProfileView.as_view()),
     path('recruiter/job/<int:job_id>/', JobManagementView.as_view()),
     path('resume/', ResumeView.as_view()),
     path('messages/', MessagesView.as_view()),
     path('notifications/', NotificationsView.as_view()),
+    path('freelancer/interviews/', FreelancerInterviewsView.as_view()),
+    path('freelancer/application/<int:app_id>/slots/', GetInterviewSlotsView.as_view()),
+    path('freelancer/slot/<int:slot_id>/select/', SelectInterviewSlotView.as_view()),
+    path('freelancer/application/<int:app_id>/accept-offer/', AcceptOfferView.as_view()),
 ]

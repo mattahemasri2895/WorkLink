@@ -56,6 +56,11 @@ class ApplicationSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         if not data.get('applied_at'):
             data['applied_at'] = instance.job.created_at if hasattr(instance, 'job') else None
+        # Add offer fields if they exist
+        if hasattr(instance, 'offer_letter'):
+            data['offer_letter'] = instance.offer_letter.url if instance.offer_letter else None
+        if hasattr(instance, 'offer_message'):
+            data['offer_message'] = instance.offer_message
         return data
 
 

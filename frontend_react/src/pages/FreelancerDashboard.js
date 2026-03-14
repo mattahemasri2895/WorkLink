@@ -1,10 +1,11 @@
 import Sidebar from "../components/Sidebar";
+import CircularProgress from "../components/CircularProgress";
 import { useEffect, useState } from "react";
 import { apiCall } from "../utils/apiClient";
-import { Pie, Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 function FreelancerDashboard() {
   const [stats, setStats] = useState({ total_applications: 0, accepted: 0, rejected: 0, pending: 0, profile_completion: 0 });
@@ -64,15 +65,6 @@ function FreelancerDashboard() {
     }]
   };
 
-  const pieData = {
-    labels: ['Completed', 'Remaining'],
-    datasets: [{
-      data: [stats.profile_completion, 100 - stats.profile_completion],
-      backgroundColor: ['#10b981', '#e5e7eb'],
-      borderWidth: 0,
-    }]
-  };
-
   return (
     <div className="app">
       <Sidebar role="freelancer" />
@@ -127,9 +119,8 @@ function FreelancerDashboard() {
           </div>
           <div className="chart-card">
             <h3>📊 Profile Completion</h3>
-            <Pie data={pieData} options={{ responsive: true, maintainAspectRatio: true }} />
-            <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '24px', fontWeight: 'bold', color: '#10b981' }}>
-              {stats.profile_completion}%
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
+              <CircularProgress percentage={stats.profile_completion} size={200} strokeWidth={20} />
             </div>
           </div>
         </div>

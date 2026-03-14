@@ -63,11 +63,15 @@ class Job(models.Model):
 class Application(models.Model):
     STATUS_CHOICES = (
         ('pending', 'Pending'),
-        ('shortlisted', 'Shortlisted'),
-        ('interview_scheduled', 'Interview Scheduled'),
-        ('exam_scheduled', 'Exam Scheduled'),
-        ('hired', 'Hired'),
+        ('accepted', 'Accepted'),
         ('rejected', 'Rejected'),
+        ('interview_scheduled', 'Interview Scheduled'),
+        ('interview_completed', 'Interview Completed'),
+        ('interview_rejected', 'Interview Rejected'),
+        ('selected', 'Selected'),
+        ('offer_sent', 'Offer Sent'),
+        ('offer_accepted', 'Offer Accepted'),
+        ('hired', 'Hired'),
     )
 
     job = models.ForeignKey(Job, on_delete=models.CASCADE)
@@ -75,6 +79,8 @@ class Application(models.Model):
     status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='pending')
     applied_at = models.DateTimeField(default=timezone.now)
     resume_snapshot = models.FileField(upload_to='application_resumes/', blank=True, null=True)
+    offer_letter = models.FileField(upload_to='offer_letters/', blank=True, null=True)
+    offer_message = models.TextField(blank=True, default="")
 
 
 class InterviewSlot(models.Model):
@@ -84,6 +90,7 @@ class InterviewSlot(models.Model):
     meeting_link = models.URLField(blank=True, default="")
     notes = models.TextField(blank=True, default="")
     is_completed = models.BooleanField(default=False)
+    is_selected = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
 
 

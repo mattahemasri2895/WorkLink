@@ -5,13 +5,17 @@
 }
 
 .auth-left {
-  flex: 1;
+  flex: 0 0 50%;
   background: linear-gradient(135deg, #2563eb 0%, #0891b2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 60px;
   color: white;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .auth-branding h1 {
@@ -63,12 +67,14 @@
 }
 
 .auth-right {
-  flex: 1;
+  flex: 0 0 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 60px;
   background: white;
+  overflow-y: auto;
+  min-height: 100vh;
 }
 
 .auth-form-container {
@@ -181,6 +187,9 @@
   }
 
   .auth-left {
+    flex: 0 0 auto;
+    position: relative;
+    height: auto;
     padding: 40px 20px;
   }
 
@@ -198,6 +207,8 @@
   }
 
   .auth-right {
+    flex: 0 0 auto;
     padding: 40px 20px;
+    min-height: auto;
   }
 }

@@ -15,7 +15,9 @@ import RecruiterProfile from "./pages/RecruiterProfile";
 import Applicants from "./pages/Applicants";
 import Messages from "./pages/Messages";
 import Notifications from "./pages/Notifications";
-
+import Interviews from "./pages/Interviews";
+import Settings from "./pages/Settings";
+import Help from "./pages/Help";
 
 function App() {
   return (
@@ -41,6 +43,9 @@ function App() {
         <Route path="/applicants" element={<Applicants />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/interviews" element={<Interviews />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/help" element={<Help />} />
 
       </Routes>
     </BrowserRouter>

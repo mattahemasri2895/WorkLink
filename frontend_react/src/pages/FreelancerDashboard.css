@@ -53,8 +53,8 @@
 
 .form-group textarea:focus {
   outline: none;
-  border-color: #4CAF50;
-  box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+  border-color: #667eea;
+  box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
 }
 
 .form-actions {
@@ -96,7 +96,7 @@
 .profile-view h3 {
   color: #333;
   margin-bottom: 25px;
-  border-bottom: 2px solid #4CAF50;
+  border-bottom: 2px solid #667eea;
   padding-bottom: 10px;
 }
 
@@ -117,7 +117,7 @@
   line-height: 1.6;
   padding: 10px;
   background-color: #f9f9f9;
-  border-left: 3px solid #4CAF50;
+  border-left: 3px solid #667eea;
   border-radius: 3px;
 }
 
@@ -133,12 +133,12 @@
 }
 
 .btn-primary {
-  background-color: #4CAF50;
+  background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
 }
 
 .btn-primary:hover {
-  background-color: #45a049;
+  opacity: 0.9;
 }
 
 .btn-secondary {

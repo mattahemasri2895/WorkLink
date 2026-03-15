@@ -1,10 +1,10 @@
 .page-header-box {
-  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 30px 35px;
   border-radius: 16px;
   margin-bottom: 30px;
-  box-shadow: 0 4px 20px rgba(20, 184, 166, 0.2);
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
 }
 
 .page-header-box h1 {
@@ -44,16 +44,16 @@
   background: white;
   padding: 25px;
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(20, 184, 166, 0.08);
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.08);
   border: 2px solid var(--border);
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .application-card:hover {
-  border-color: #14b8a6;
+  border-color: #667eea;
   transform: translateY(-5px);
-  box-shadow: 0 8px 30px rgba(20, 184, 166, 0.15);
+  box-shadow: 0 8px 30px rgba(102, 126, 234, 0.15);
 }
 
 .app-header {
@@ -117,7 +117,7 @@
 }
 
 .app-meta strong {
-  color: #14b8a6;
+  color: #667eea;
 }
 
 .empty-state-card {
@@ -171,7 +171,7 @@
 }
 
 .modal-content h2 {
-  color: #14b8a6;
+  color: #667eea;
   margin-bottom: 20px;
 }
 
@@ -202,14 +202,14 @@
 }
 
 .job-details strong {
-  color: #14b8a6;
+  color: #667eea;
 }
 
 .loading-spinner {
   text-align: center;
   padding: 50px;
   font-size: 1.2em;
-  color: #14b8a6;
+  color: #667eea;
 }
 
 @media (max-width: 768px) {

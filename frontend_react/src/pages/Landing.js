@@ -45,7 +45,8 @@ function Landing() {
       </nav>
 
       {/* Hero */}
-      <section className="landing-hero">
+      <section className="landing-hero-wrap">
+      <div className="landing-hero">
         <div className="landing-hero-content">
           <div className="landing-hero-badge">🌟 #1 Freelance Platform</div>
           <h1 className="landing-hero-title">
@@ -100,6 +101,7 @@ function Landing() {
             <button className="landing-btn-primary" style={{ width: "100%", padding: "8px" }}>Apply Now</button>
           </div>
         </div>
+      </div>
       </section>
 
       {/* Stats */}

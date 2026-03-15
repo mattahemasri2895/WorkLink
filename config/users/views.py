@@ -654,40 +654,60 @@ class ScheduleInterviewView(APIView):
             if not slots:
                 return Response({'error': 'No slots provided'}, status=400)
 
-            # Delete old unselected slots and create new ones
-            InterviewSlot.objects.filter(application=application, is_selected=False).delete()
+            # Delete old unselected slots
+            try:
+                InterviewSlot.objects.filter(application=application, is_selected=False).delete()
+            except Exception:
+                # is_selected column may not exist yet — delete all unselected by checking is_completed
+                InterviewSlot.objects.filter(application=application, is_completed=False).delete()
 
             from django.utils.dateparse import parse_datetime
-            created_slots = []
-            for slot in slots:
-                date_val = slot.get('scheduled_date', '')
-                if not date_val:
-                    continue
-                parsed_date = parse_datetime(date_val)
-                if not parsed_date:
-                    continue
-                s = InterviewSlot.objects.create(
-                    application=application,
-                    scheduled_date=parsed_date,
-                    duration_minutes=int(slot.get('duration_minutes', 30)),
-                    meeting_link=slot.get('meeting_link', ''),
-                    notes=slot.get('notes', ''),
-                )
-                created_slots.append(s)
+            from django.utils import timezone as tz
+            import datetime
 
+            created_slots = []
+            errors = []
+            for i, slot in enumerate(slots):
+                date_val = slot.get('scheduled_date', '').strip()
+                if not date_val:
+                    errors.append(f'Slot {i+1}: missing date')
+                    continue
+                # parse_datetime handles ISO 8601 (datetime-local sends "2024-01-15T10:00")
+                parsed_date = parse_datetime(date_val)
+                if parsed_date is None:
+                    # try parsing as date+time manually
+                    try:
+                        parsed_date = datetime.datetime.fromisoformat(date_val)
+                    except Exception:
+                        errors.append(f'Slot {i+1}: invalid date format "{date_val}"')
+                        continue
+                # Make timezone-aware if USE_TZ=True
+                if tz.is_naive(parsed_date):
+                    parsed_date = tz.make_aware(parsed_date, tz.get_current_timezone())
+                try:
+                    s = InterviewSlot.objects.create(
+                        application=application,
+                        scheduled_date=parsed_date,
+                        duration_minutes=int(slot.get('duration_minutes', 30)),
+                        meeting_link=slot.get('meeting_link', '') or '',
+                        notes=slot.get('notes', '') or '',
+                    )
+                    created_slots.append(s)
+                except Exception as e:
+                    logger.exception(f'Failed to create slot {i+1}')
+                    errors.append(f'Slot {i+1}: {str(e)}')
             if not created_slots:
-                return Response({'error': 'No valid slots provided'}, status=400)
+                return Response({'error': f'No valid slots saved. Errors: {errors}'}, status=400)
 
             application.status = 'accepted'
             application.save()
 
-            slots_text = "I've sent you interview slots. Please select your preferred time from My Applications."
             try:
                 Message.objects.create(
                     sender=request.user,
                     recipient=application.freelancer,
                     subject=f"Interview Invitation: {application.job.title}",
-                    body=f"Congratulations! You have been shortlisted for {application.job.title}. {slots_text}"
+                    body=f"Congratulations! You have been shortlisted for {application.job.title}. Please go to My Applications to select your preferred interview slot."
                 )
                 Notification.objects.create(
                     user=application.freelancer,
@@ -697,13 +717,17 @@ class ScheduleInterviewView(APIView):
             except Exception:
                 logger.exception('Failed to send message')
 
-            return Response({'message': f'{len(created_slots)} interview slot(s) sent successfully'}, status=201)
+            return Response({
+                'message': f'{len(created_slots)} interview slot(s) sent successfully',
+                'slots_created': len(created_slots),
+                'errors': errors
+            }, status=201)
 
         except Application.DoesNotExist:
             return Response({'error': 'Application not found'}, status=404)
         except Exception as e:
             logger.exception('Error scheduling interview')
-            return Response({'error': str(e)}, status=500)
+            return Response({'error': str(e), 'trace': traceback.format_exc()}, status=500)
 
 
 # ---------------- FREELANCER INTERVIEWS ----------------
@@ -815,17 +839,28 @@ class GetInterviewSlotsView(APIView):
         try:
             application = Application.objects.get(id=app_id, freelancer=request.user)
             slots = InterviewSlot.objects.filter(application=application).order_by('scheduled_date')
-            result = [{
-                'id': slot.id,
-                'scheduled_date': slot.scheduled_date,
-                'duration_minutes': slot.duration_minutes,
-                'meeting_link': slot.meeting_link,
-                'notes': slot.notes,
-                'is_selected': slot.is_selected,
-            } for slot in slots]
+            result = []
+            for slot in slots:
+                try:
+                    is_sel = slot.is_selected
+                except Exception:
+                    is_sel = False
+                result.append({
+                    'id': slot.id,
+                    'scheduled_date': slot.scheduled_date.isoformat(),
+                    'duration_minutes': slot.duration_minutes,
+                    'meeting_link': slot.meeting_link or '',
+                    'notes': slot.notes or '',
+                    'is_selected': is_sel,
+                })
+            logger.info(f'GetInterviewSlotsView: app_id={app_id}, found {len(result)} slots')
             return Response(result)
         except Application.DoesNotExist:
+            logger.warning(f'GetInterviewSlotsView: Application {app_id} not found for user {request.user.username}')
             return Response({'error': 'Application not found'}, status=404)
+        except Exception as e:
+            logger.exception('Error in GetInterviewSlotsView')
+            return Response({'error': str(e)}, status=500)
 
 
 # ---------------- SEND OFFER LETTER ----------------

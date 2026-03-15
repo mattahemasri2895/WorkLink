@@ -4,7 +4,7 @@
   margin-bottom: 30px;
   text-align: center;
   padding: 40px 20px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-radius: 8px;
 }
@@ -168,11 +168,11 @@
 }
 
 .submit-btn:hover {
-  background-color: #5a67d8; /* could also be slightly darker than var(--primary) */
+  background-color: #764ba2;
 }
 
 .submit-btn:hover {
-  background-color: #5a67d8;
+  background-color: #764ba2;
 }
 
 .reject-btn {

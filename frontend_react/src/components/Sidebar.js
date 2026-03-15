@@ -21,22 +21,24 @@ function Sidebar({ role }) {
 
   const fetchCounts = async () => {
     try {
-      const msgEndpoint = role === 'freelancer' 
-        ? "http://localhost:8000/api/auth/freelancer/messages/"
-        : "http://localhost:8000/api/auth/messages/";
+      const msgEndpoint = "http://localhost:8000/api/auth/messages/";
       const notifEndpoint = role === 'freelancer'
         ? "http://localhost:8000/api/auth/freelancer/notifications/"
         : "http://localhost:8000/api/auth/notifications/";
-      
+
       const res1 = await apiCall(msgEndpoint, { method: "GET" });
       if (res1.ok) {
-        const msgs = await res1.json();
-        setUnreadMessages(msgs.filter(m => !m.is_read).length);
+        const convs = await res1.json();
+        // conversations list returns unread_count per conversation
+        const total = Array.isArray(convs)
+          ? convs.reduce((sum, c) => sum + (c.unread_count || 0), 0)
+          : 0;
+        setUnreadMessages(total);
       }
       const res2 = await apiCall(notifEndpoint, { method: "GET" });
       if (res2.ok) {
         const data = await res2.json();
-        setUnreadNotifications(data.unread);
+        setUnreadNotifications(data.unread || 0);
       }
     } catch (e) {
       console.error('Failed to fetch counts', e);
@@ -94,7 +96,7 @@ function Sidebar({ role }) {
               <span className="nav-icon">👤</span>
               {!isCollapsed && <span className="nav-text">Profile</span>}
             </Link>
-            <div style={{ borderTop: '1px solid #e2e8f0', margin: '12px 0' }}></div>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '8px 0' }}></div>
             <Link to="/settings" className="nav-item" title="Settings">
               <span className="nav-icon">⚙️</span>
               {!isCollapsed && <span className="nav-text">Settings</span>}
@@ -142,7 +144,7 @@ function Sidebar({ role }) {
               <span className="nav-icon">👤</span>
               {!isCollapsed && <span className="nav-text">Profile</span>}
             </Link>
-            <div style={{ borderTop: '1px solid #e2e8f0', margin: '12px 0' }}></div>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', margin: '8px 0' }}></div>
             <Link to="/settings" className="nav-item" title="Settings">
               <span className="nav-icon">⚙️</span>
               {!isCollapsed && <span className="nav-text">Settings</span>}

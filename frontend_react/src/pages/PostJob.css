@@ -59,7 +59,7 @@
 }
 
 .job-form .submit-btn:hover {
-  background-color: #5a67d8;
+  background: linear-gradient(135deg, #764ba2, #667eea);
 }
 
 .error-message {

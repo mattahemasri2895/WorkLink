@@ -1,6 +1,6 @@
 // API utility with automatic token refresh
 export const apiCall = async (url, options = {}) => {
-  let token = localStorage.getItem("token");
+  let token = localStorage.getItem("token") || localStorage.getItem("access_token");
   const refreshToken = localStorage.getItem("refresh_token");
 
   // Set default headers

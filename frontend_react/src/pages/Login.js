@@ -116,6 +116,9 @@ function Login() {
             Don't have an account?{" "}
             <a href="/register">Sign up</a>
           </p>
+          <p className="auth-switch" style={{ marginTop: "8px" }}>
+            <a href="/landing">← Back to Home</a>
+          </p>
         </div>
       </div>
     </div>

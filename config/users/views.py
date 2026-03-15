@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Job, Application, FreelancerProfile, RecruiterProfile, Message, Notification, Wishlist, InterviewSlot
+from django.db.models import Q
 from .serializers import (
     RegisterSerializer,
     UserSerializer,
@@ -241,17 +242,39 @@ class FreelancerStatsView(APIView):
             return Response({'error': str(e)}, status=500)
 
 
-# ---------------- MESSAGES ----------------
+# ---------------- MESSAGES (Live Chat) ----------------
 class MessagesView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        msgs = Message.objects.filter(recipient=request.user)
-        serializer = MessageSerializer(msgs, many=True)
-        return Response(serializer.data)
+        # Return list of unique conversation partners
+        sent = Message.objects.filter(sender=request.user).values_list('recipient_id', flat=True)
+        received = Message.objects.filter(recipient=request.user).values_list('sender_id', flat=True)
+        partner_ids = set(list(sent) + list(received))
+        partner_ids.discard(request.user.id)
+
+        conversations = []
+        for pid in partner_ids:
+            try:
+                partner = User.objects.get(id=pid)
+                last_msg = Message.objects.filter(
+                    Q(sender=request.user, recipient=partner) | Q(sender=partner, recipient=request.user)
+                ).order_by('-created_at').first()
+                unread = Message.objects.filter(sender=partner, recipient=request.user, is_read=False).count()
+                conversations.append({
+                    'partner_id': pid,
+                    'partner_username': partner.username,
+                    'partner_role': partner.role,
+                    'last_message': last_msg.body if last_msg else '',
+                    'last_message_time': last_msg.created_at if last_msg else None,
+                    'unread_count': unread,
+                })
+            except User.DoesNotExist:
+                continue
+        conversations.sort(key=lambda x: x['last_message_time'] or '', reverse=True)
+        return Response(conversations)
 
     def post(self, request):
-        # allow marking a message read or sending simple message
         action = request.data.get('action')
         if action == 'mark_read':
             mid = request.data.get('id')
@@ -262,7 +285,56 @@ class MessagesView(APIView):
                 return Response({'message': 'marked'})
             except Message.DoesNotExist:
                 return Response({'error': 'Message not found'}, status=404)
+        if action == 'send':
+            recipient_id = request.data.get('recipient_id')
+            body = request.data.get('body', '').strip()
+            if not body:
+                return Response({'error': 'Message body required'}, status=400)
+            try:
+                recipient = User.objects.get(id=recipient_id)
+                msg = Message.objects.create(
+                    sender=request.user,
+                    recipient=recipient,
+                    subject='',
+                    body=body
+                )
+                return Response({
+                    'id': msg.id,
+                    'sender': request.user.id,
+                    'sender_username': request.user.username,
+                    'recipient': recipient.id,
+                    'body': msg.body,
+                    'created_at': msg.created_at,
+                    'is_read': msg.is_read,
+                }, status=201)
+            except User.DoesNotExist:
+                return Response({'error': 'Recipient not found'}, status=404)
         return Response({'error': 'Invalid action'}, status=400)
+
+
+# ---------------- CHAT THREAD ----------------
+class ChatThreadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, partner_id):
+        try:
+            partner = User.objects.get(id=partner_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=404)
+        msgs = Message.objects.filter(
+            Q(sender=request.user, recipient=partner) | Q(sender=partner, recipient=request.user)
+        ).order_by('created_at')
+        # Mark received messages as read
+        msgs.filter(recipient=request.user, is_read=False).update(is_read=True)
+        result = [{
+            'id': m.id,
+            'sender': m.sender.id,
+            'sender_username': m.sender.username,
+            'body': m.body,
+            'created_at': m.created_at,
+            'is_mine': m.sender == request.user,
+        } for m in msgs]
+        return Response(result)
 
 
 # ---------------- NOTIFICATIONS ----------------
@@ -305,6 +377,7 @@ class RecruiterApplicationsView(APIView):
             result.append({
                 "id": app.id,
                 "freelancer": app.freelancer.username,
+                "freelancer_id": app.freelancer.id,
                 "job": app.job.title,
                 "status": app.status,
                 "bio": profile.bio if profile else "",
@@ -577,47 +650,55 @@ class ScheduleInterviewView(APIView):
     def post(self, request, app_id):
         try:
             application = Application.objects.get(id=app_id, job__recruiter=request.user)
-            
             slots = request.data.get('slots', [])
-            
             if not slots:
                 return Response({'error': 'No slots provided'}, status=400)
-            
+
+            # Delete old unselected slots and create new ones
+            InterviewSlot.objects.filter(application=application, is_selected=False).delete()
+
+            from django.utils.dateparse import parse_datetime
+            created_slots = []
+            for slot in slots:
+                date_val = slot.get('scheduled_date', '')
+                if not date_val:
+                    continue
+                parsed_date = parse_datetime(date_val)
+                if not parsed_date:
+                    continue
+                s = InterviewSlot.objects.create(
+                    application=application,
+                    scheduled_date=parsed_date,
+                    duration_minutes=int(slot.get('duration_minutes', 30)),
+                    meeting_link=slot.get('meeting_link', ''),
+                    notes=slot.get('notes', ''),
+                )
+                created_slots.append(s)
+
+            if not created_slots:
+                return Response({'error': 'No valid slots provided'}, status=400)
+
             application.status = 'accepted'
             application.save()
-            
-            slots_text = "Available Interview Slots:\n\n"
-            for i, slot in enumerate(slots, 1):
-                slots_text += f"Slot {i}:\n"
-                slots_text += f"  Date & Time: {slot.get('scheduled_date', 'Not specified')}\n"
-                slots_text += f"  Duration: {slot.get('duration_minutes', 30)} minutes\n"
-                if slot.get('meeting_link'):
-                    slots_text += f"  Meeting Link: {slot.get('meeting_link')}\n"
-                if slot.get('notes'):
-                    slots_text += f"  Notes: {slot.get('notes')}\n"
-                slots_text += "\n"
-            
-            slots_text += "Please reply with your preferred slot number."
-            
+
+            slots_text = "I've sent you interview slots. Please select your preferred time from My Applications."
             try:
                 Message.objects.create(
                     sender=request.user,
                     recipient=application.freelancer,
                     subject=f"Interview Invitation: {application.job.title}",
-                    body=f"Congratulations! You have been selected for the interview round for {application.job.title}.\n\n{slots_text}"
+                    body=f"Congratulations! You have been shortlisted for {application.job.title}. {slots_text}"
                 )
-                
                 Notification.objects.create(
                     user=application.freelancer,
                     notif_type='interview_slots_available',
                     data={'job_title': application.job.title, 'application_id': application.id}
                 )
-            except Exception as e:
+            except Exception:
                 logger.exception('Failed to send message')
-                return Response({'error': 'Failed to send message'}, status=500)
-            
-            return Response({'message': 'Interview slots sent successfully'}, status=201)
-            
+
+            return Response({'message': f'{len(created_slots)} interview slot(s) sent successfully'}, status=201)
+
         except Application.DoesNotExist:
             return Response({'error': 'Application not found'}, status=404)
         except Exception as e:
@@ -691,35 +772,37 @@ class SelectInterviewSlotView(APIView):
         try:
             slot = InterviewSlot.objects.get(id=slot_id, application__freelancer=request.user)
             application = slot.application
-            
-            # Mark all other slots as not selected
+
             InterviewSlot.objects.filter(application=application).update(is_selected=False)
-            
-            # Mark this slot as selected
             slot.is_selected = True
             slot.save()
-            
+
             application.status = 'interview_scheduled'
             application.save()
-            
-            # Send confirmation message
+
+            slot_time = slot.scheduled_date.strftime('%B %d, %Y at %I:%M %p')
             try:
                 Message.objects.create(
                     sender=request.user,
                     recipient=application.job.recruiter,
-                    subject=f"Interview Slot Confirmed: {application.job.title}",
-                    body=f"Interview slot confirmed for {slot.scheduled_date.strftime('%Y-%m-%d %H:%M')}. Duration: {slot.duration_minutes} minutes."
+                    subject=f"Interview Slot Selected: {application.job.title}",
+                    body=f"{request.user.username} has selected the interview slot on {slot_time} ({slot.duration_minutes} min) for {application.job.title}."
                 )
                 Message.objects.create(
                     sender=application.job.recruiter,
                     recipient=request.user,
-                    subject=f"Interview Confirmation: {application.job.title}",
-                    body=f"Your interview is confirmed for {slot.scheduled_date.strftime('%Y-%m-%d %H:%M')}. Duration: {slot.duration_minutes} minutes. Meeting Link: {slot.meeting_link}"
+                    subject=f"Interview Confirmed: {application.job.title}",
+                    body=f"Your interview for {application.job.title} is confirmed on {slot_time} ({slot.duration_minutes} min).{' Meeting: ' + slot.meeting_link if slot.meeting_link else ''}"
+                )
+                Notification.objects.create(
+                    user=application.job.recruiter,
+                    notif_type='slot_selected',
+                    data={'freelancer': request.user.username, 'job_title': application.job.title, 'slot_time': slot_time}
                 )
             except Exception:
                 logger.exception('Failed to send confirmation')
-            
-            return Response({'message': 'Slot selected successfully'})
+
+            return Response({'message': 'Slot selected successfully', 'slot_time': slot_time})
         except InterviewSlot.DoesNotExist:
             return Response({'error': 'Slot not found'}, status=404)
 
@@ -731,19 +814,15 @@ class GetInterviewSlotsView(APIView):
     def get(self, request, app_id):
         try:
             application = Application.objects.get(id=app_id, freelancer=request.user)
-            slots = InterviewSlot.objects.filter(application=application)
-            
-            result = []
-            for slot in slots:
-                result.append({
-                    'id': slot.id,
-                    'scheduled_date': slot.scheduled_date,
-                    'duration_minutes': slot.duration_minutes,
-                    'meeting_link': slot.meeting_link,
-                    'notes': slot.notes,
-                    'is_selected': slot.is_selected
-                })
-            
+            slots = InterviewSlot.objects.filter(application=application).order_by('scheduled_date')
+            result = [{
+                'id': slot.id,
+                'scheduled_date': slot.scheduled_date,
+                'duration_minutes': slot.duration_minutes,
+                'meeting_link': slot.meeting_link,
+                'notes': slot.notes,
+                'is_selected': slot.is_selected,
+            } for slot in slots]
             return Response(result)
         except Application.DoesNotExist:
             return Response({'error': 'Application not found'}, status=404)

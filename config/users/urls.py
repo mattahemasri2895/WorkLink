@@ -15,6 +15,7 @@ urlpatterns = [
     path('freelancer/applications/', MyApplicationsView.as_view()),
     path('freelancer/stats/', FreelancerStatsView.as_view()),
     path('freelancer/messages/', MessagesView.as_view()),
+    path('freelancer/messages/thread/<int:partner_id>/', ChatThreadView.as_view()),
     path('freelancer/notifications/', NotificationsView.as_view()),
 
     path('jobs/create/', JobCreateView.as_view()),
@@ -34,6 +35,7 @@ urlpatterns = [
     path('recruiter/job/<int:job_id>/', JobManagementView.as_view()),
     path('resume/', ResumeView.as_view()),
     path('messages/', MessagesView.as_view()),
+    path('messages/thread/<int:partner_id>/', ChatThreadView.as_view()),
     path('notifications/', NotificationsView.as_view()),
     path('freelancer/interviews/', FreelancerInterviewsView.as_view()),
     path('freelancer/application/<int:app_id>/slots/', GetInterviewSlotsView.as_view()),
